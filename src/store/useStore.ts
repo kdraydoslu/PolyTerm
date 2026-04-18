@@ -153,7 +153,7 @@ export const useStore = create<AppState>((set, get) => ({
         }
         
         return {
-          id: event.id,
+          id: String(event.id),
           title: event.title,
           category: event.tags?.[0]?.label || event.tags?.[0] || 'General',
           image: event.image || 'https://polymarket.com/favicon.ico',
