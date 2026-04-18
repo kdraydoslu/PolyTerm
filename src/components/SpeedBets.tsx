@@ -1,13 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
-import { Zap } from 'lucide-react';
-
-const SPEED_MARKETS = [
-  { id: 'sm1', title: 'BTC hits $68.5k in next 5m?', timer: 298, chance: 42, yesPrice: 42, noPrice: 58 },
-  { id: 'sm2', title: 'ETH goes below $3.4k in next 15m?', timer: 840, chance: 68, yesPrice: 68, noPrice: 32 },
-  { id: 'sm3', title: 'Fed speaks dovish in first 5m of FOMC?', timer: 145, chance: 50, yesPrice: 50, noPrice: 50 },
-  { id: 'sm4', title: 'SOL touches $180 before hour close?', timer: 1240, chance: 15, yesPrice: 15, noPrice: 85 },
-];
+import { Zap, Clock, Activity, ArrowUpRight } from 'lucide-react';
 
 function formatTimer(seconds: number) {
   const m = Math.floor(seconds / 60);
@@ -18,91 +11,165 @@ function formatTimer(seconds: number) {
 import { useEthersSigner } from '../lib/ethersAdapter';
 
 export function SpeedBets() {
-  const { executeTrade, addTerminalLog } = useStore();
+  const { markets, executeTrade, addTerminalLog } = useStore();
   const signer = useEthersSigner();
+  
+  // We'll take first 6 markets and assign them random timers for "Speed" feel
+  const speedMarkets = markets.slice(0, 6);
   const [timers, setTimers] = useState<Record<string, number>>({});
+  const [initialTimes, setInitialTimes] = useState<Record<string, number>>({});
 
   useEffect(() => {
-    const initial = SPEED_MARKETS.reduce((acc, m) => ({ ...acc, [m.id]: m.timer }), {});
-    setTimers(initial);
+    // Initialize timers for new markets arriving
+    const newTimers: Record<string, number> = { ...timers };
+    const newInit: Record<string, number> = { ...initialTimes };
+    
+    speedMarkets.forEach(m => {
+      if (!newTimers[m.id]) {
+        const time = Math.floor(Math.random() * 600) + 120; // 2-12 minutes
+        newTimers[m.id] = time;
+        newInit[m.id] = time;
+      }
+    });
+    
+    setTimers(newTimers);
+    setInitialTimes(newInit);
+  }, [markets]);
 
+  // Global countdown
+  useEffect(() => {
     const interval = setInterval(() => {
       setTimers(prev => {
         const next = { ...prev };
         Object.keys(next).forEach(k => {
           if (next[k] > 0) next[k] -= 1;
+          else next[k] = Math.floor(Math.random() * 600) + 200; // Reset for loop feel
         });
         return next;
       });
     }, 1000);
-
     return () => clearInterval(interval);
   }, []);
 
   const handleBet = (marketId: string, title: string, outcome: 'YES' | 'NO', price: number) => {
-    // Quick bet fixed amount 100 USDC
-    addTerminalLog(`ZAP Processing: $100 on ${outcome} [${title}] at ${price}¢`, 'info');
-    // Using fake id mapped locally but simulates the real flow
+    addTerminalLog(`SPEED ZAP: Executing $100 ${outcome} position on [${title}]`, 'info');
     executeTrade(marketId, outcome, 100, signer);
   };
 
+  if (speedMarkets.length === 0) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center bg-[#050505] text-muted-foreground font-mono">
+        <Activity className="w-8 h-8 mb-4 animate-spin text-primary/20" />
+        <span className="animate-pulse">Loading High-Frequency Markets...</span>
+      </div>
+    );
+  }
+
   return (
-    <div className="h-full flex flex-col p-6 bg-[#050505] overflow-auto">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-sans tracking-tight font-bold mb-2 text-white flex items-center gap-3">
-            <Zap className="w-8 h-8 text-[#FF3333]" />
-            Speed Bets (1m-15m)
+    <div className="h-full flex flex-col p-8 bg-[#020202] overflow-auto selection:bg-primary/30">
+      <div className="mb-10 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div className="relative">
+          <div className="absolute -top-6 -left-2 bg-[#FF3333]/10 text-[#FF3333] px-2 py-0.5 rounded text-[10px] font-mono border border-[#FF3333]/20 animate-pulse uppercase">Alpha Phase</div>
+          <h2 className="text-4xl font-black tracking-tighter text-white flex items-center gap-3 italic">
+            <Zap className="w-10 h-10 text-primary fill-primary/20" />
+            SPEED <span className="text-primary italic">ZAP</span>
           </h2>
-          <p className="font-mono text-xs text-muted-foreground mt-2">
-            Warning: Highly volatile micro-markets. Fixed $100 execution size via ZAP.
+          <p className="font-mono text-[10px] text-muted-foreground mt-3 uppercase tracking-widest bg-[#0A0A0A] p-2 border-l-2 border-primary inline-block">
+            High-Frequency Prediction Engine. Automated $100 Sizing.
           </p>
+        </div>
+        
+        <div className="flex gap-4">
+           <div className="bg-[#0A0A0A] border border-[#111] p-3 rounded-xl flex flex-col items-end">
+              <span className="text-[10px] font-mono text-muted-foreground uppercase">24H Volume</span>
+              <span className="text-lg font-mono text-white">$4.2M</span>
+           </div>
+           <div className="bg-[#0A0A0A] border border-[#111] p-3 rounded-xl flex flex-col items-end">
+              <span className="text-[10px] font-mono text-muted-foreground uppercase">Liquidity</span>
+              <span className="text-lg font-mono text-white">$890K</span>
+           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        {SPEED_MARKETS.map((m) => (
-          <div key={m.id} className="border border-[#1F1F1F] p-5 rounded-lg bg-[#0A0A0A] flex flex-col relative overflow-hidden group">
-            <div className="absolute top-0 left-0 w-full h-1 bg-[#1F1F1F]">
-              <div 
-                className={`h-full ${timers[m.id] < 60 ? 'bg-[#FF3333]' : 'bg-[#00FF55]'}`} 
-                style={{ width: `${(timers[m.id] / m.timer) * 100}%`, transition: 'width 1s linear' }}
-              />
-            </div>
-            
-            <div className="flex justify-between items-start mb-4 mt-2">
-              <h3 className="font-sans text-lg font-bold text-white max-w-[70%]">{m.title}</h3>
-              <div className="font-mono text-xl font-bold p-2 bg-[#121212] border border-[#1F1F1F] rounded">
-                <span className={timers[m.id] < 60 ? 'text-[#FF3333] animate-pulse' : 'text-white'}>
-                  {formatTimer(timers[m.id] || 0)}
-                </span>
+      <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6">
+        {speedMarkets.map((m) => {
+          const timeLeft = timers[m.id] || 0;
+          const progress = (timeLeft / (initialTimes[m.id] || 1)) * 100;
+          const isExpiring = timeLeft < 60;
+
+          return (
+            <div key={m.id} className="relative group perspective-1000">
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/20 to-transparent rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
+              <div className="relative border border-[#1A1A1A] p-6 rounded-2xl bg-[#080808] flex flex-col h-full transform transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 shadow-2xl overflow-hidden">
+                
+                {/* Progress Bar Background */}
+                <div className="absolute top-0 left-0 w-full h-[3px] bg-[#111]">
+                  <div 
+                    className={`h-full transition-all duration-1000 ease-linear ${isExpiring ? 'bg-[#FF3333] shadow-[0_0_10px_#FF3333]' : 'bg-primary shadow-[0_0_10px_rgba(0,255,85,0.5)]'}`} 
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+
+                <div className="flex justify-between items-start gap-4 mb-6">
+                  <div className="flex-1 overflow-hidden">
+                    <div className="flex items-center gap-2 mb-2">
+                       <span className="text-[10px] p-1 bg-[#121212] border border-[#222] rounded text-muted-foreground uppercase font-black tracking-tighter tabular-nums">ID: {m.id}</span>
+                       <span className="flex items-center gap-1 text-[10px] text-[#00FF55] font-bold italic"><Activity className="w-3 h-3"/> ACTIVE</span>
+                    </div>
+                    <h3 className="text-lg font-bold text-white leading-tight group-hover:text-primary transition-colors line-clamp-2 h-14">{m.title}</h3>
+                  </div>
+                  
+                  <div className={`p-4 rounded-xl border flex flex-col items-center justify-center transition-all min-w-[80px] ${isExpiring ? 'bg-[#FF3333]/10 border-[#FF3333]/30 shadow-[inset_0_0_15px_#FF3333/10]' : 'bg-black border-[#222]'}`}>
+                    <Clock className={`w-4 h-4 mb-1 ${isExpiring ? 'text-[#FF3333]' : 'text-muted-foreground'}`}/>
+                    <span className={`font-mono text-lg font-black tracking-tighter tabular-nums ${isExpiring ? 'text-[#FF3333] animate-pulse' : 'text-white'}`}>
+                      {formatTimer(timeLeft)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-end justify-between mb-8">
+                  <div className="flex flex-col gap-1">
+                    <span className="font-mono text-[9px] text-muted-foreground uppercase tracking-widest font-bold">Consensus Chance</span>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-3xl font-black text-white italic">{m.chance}%</span>
+                      <span className="text-[10px] text-[#00FF55] font-mono flex items-center"><ArrowUpRight className="w-3 h-3"/> +1.2%</span>
+                    </div>
+                  </div>
+                  <div className="h-10 w-24 opacity-30 group-hover:opacity-100 transition-opacity">
+                      {/* Sub-chart or sparkline here in future */}
+                      <div className="flex items-end gap-0.5 h-full pt-4">
+                        {[4,7,2,9,5,10,6,8,12,7].map((h, i) => (
+                          <div key={i} className="flex-1 bg-primary rounded-t-[1px]" style={{ height: `${h*6}%` }} />
+                        ))}
+                      </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <button 
+                    onClick={() => handleBet(m.id, m.title, 'YES', m.yesPrice)}
+                    className="group/yes relative flex flex-col items-center justify-center py-4 bg-[#0A0A0A] border border-[#222] rounded-xl overflow-hidden transition-all hover:bg-[#00FF55]/10 hover:border-[#00FF55]/50 group"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#00FF55]/10 to-transparent opacity-0 group-hover/yes:opacity-100" />
+                    <span className="font-black text-[10px] text-muted-foreground group-hover/yes:text-[#00FF55] uppercase tracking-[0.2em] mb-1">PROB: YES</span>
+                    <span className="font-mono text-xl font-black text-white group-hover/yes:text-[#00FF55]">{m.yesPrice}¢</span>
+                  </button>
+                  
+                  <button 
+                    onClick={() => handleBet(m.id, m.title, 'NO', m.noPrice)}
+                    className="group/no relative flex flex-col items-center justify-center py-4 bg-[#0A0A0A] border border-[#222] rounded-xl overflow-hidden transition-all hover:bg-[#FF3333]/10 hover:border-[#FF3333]/50"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#FF3333]/10 to-transparent opacity-0 group-hover/no:opacity-100" />
+                    <span className="font-black text-[10px] text-muted-foreground group-hover/no:text-[#FF3333] uppercase tracking-[0.2em] mb-1">PROB: NO</span>
+                    <span className="font-mono text-xl font-black text-white group-hover/no:text-[#FF3333]">{m.noPrice}¢</span>
+                  </button>
+                </div>
               </div>
             </div>
-
-            <div className="flex items-center gap-2 mb-6">
-              <span className="font-mono text-xs text-muted-foreground uppercase">Implied Chance</span>
-              <span className="font-mono text-lg text-[#00FF55]">{m.chance}%</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 mt-auto">
-              <button 
-                onClick={() => handleBet(m.id, m.title, 'YES', m.yesPrice)}
-                className="flex justify-between items-center bg-[#121212] border border-[#1F1F1F] hover:bg-[#00FF55] hover:text-black hover:border-[#00FF55] text-white p-3 rounded transition-colors group/btn"
-              >
-                <span className="font-sans font-bold text-lg text-[#00FF55] group-hover/btn:text-black">YES</span>
-                <span className="font-mono">{m.yesPrice}¢</span>
-              </button>
-              <button 
-                onClick={() => handleBet(m.id, m.title, 'NO', m.noPrice)}
-                className="flex justify-between items-center bg-[#121212] border border-[#1F1F1F] hover:bg-[#FF3333] hover:text-white hover:border-[#FF3333] text-white p-3 rounded transition-colors group/btn2"
-              >
-                <span className="font-sans font-bold text-lg text-[#FF3333] group-hover/btn2:text-white">NO</span>
-                <span className="font-mono">{m.noPrice}¢</span>
-              </button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
 }
+
