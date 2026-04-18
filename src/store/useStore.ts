@@ -125,18 +125,28 @@ export const useStore = create<AppState>((set, get) => ({
   fetchMarkets: async () => {
     try {
       get().addTerminalLog('Fetching live markets from Polymarket Gamma API...', 'info');
-      const res = await fetch('https://gamma-api.polymarket.com/events?limit=20&active=true');
+      const res = await fetch('https://gamma-api.polymarket.com/events?closed=false&active=true&limit=50');
       const data = await res.json();
 
-      const liveMarkets: Market[] = data.map((event: any) => {
-        const primaryMarket = event.markets && event.markets[0];
-        const yesToken = primaryMarket?.outcomePrices?.[0] ? parseFloat(primaryMarket.outcomePrices[0]) : 0;
-        const noToken = primaryMarket?.outcomePrices?.[1] ? parseFloat(primaryMarket.outcomePrices[1]) : 0;
+      // Ensure we only process events that have valid active markets
+      const activeEvents = data.filter((event: any) => event.active && !event.closed);
+
+      const liveMarkets: Market[] = activeEvents.map((event: any) => {
+        // Find a sub-market that is actually active and not closed
+        const primaryMarket = event.markets?.find((m: any) => m.active && !m.closed) || event.markets?.[0];
         
+        let yesToken = 0;
+        let noToken = 0;
+        
+        if (primaryMarket?.outcomePrices && Array.isArray(primaryMarket.outcomePrices)) {
+          yesToken = parseFloat(primaryMarket.outcomePrices[0]) || 0;
+          noToken = parseFloat(primaryMarket.outcomePrices[1]) || 0;
+        }
+
         return {
           id: event.id,
           title: event.title,
-          category: event.tags?.[0] || 'General',
+          category: event.tags?.[0]?.label || event.tags?.[0] || 'General',
           image: event.image || 'https://polymarket.com/favicon.ico',
           volume: event.volume ? parseFloat(event.volume) : 0,
           liquidity: event.liquidity ? parseFloat(event.liquidity) : 0,
@@ -146,7 +156,7 @@ export const useStore = create<AppState>((set, get) => ({
           chance: yesToken * 100, // naive display logic
           _rawMarketIds: event.markets?.map((m: any) => m.id) // save actual market IDs for CLOB
         };
-      }).filter((m: Market) => m.yesPrice > 0);
+      }).filter((m: Market) => m.yesPrice > 0 && m.yesPrice < 1).slice(0, 20);
 
       set({ markets: liveMarkets });
       if (liveMarkets.length > 0) {
