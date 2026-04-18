@@ -161,7 +161,7 @@ export function SpeedBets() {
           
           <div className="mt-auto p-4 rounded-xl border border-[#FF3333]/10 bg-[#FF3333]/5">
              <p className="font-mono text-[9px] text-[#FF3333]/60 leading-relaxed uppercase">
-                <span className="font-black">SNIPER_MODE_{mode}:</span> T-10s Auto-trigger active. Sizing defined as {getSizing()}. Ensure Gas (MATIC) > 0.5 for fast submission.
+                <span className="font-black">SNIPER_MODE_{mode}:</span> T-10s Auto-trigger active. Sizing defined as {getSizing()}. Ensure Gas (MATIC) &gt; 0.5 for fast submission.
              </p>
           </div>
         </div>
