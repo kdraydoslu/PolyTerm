@@ -137,12 +137,21 @@ export const useStore = create<AppState>((set, get) => ({
         
         let yesToken = 0;
         let noToken = 0;
-        
-        if (primaryMarket?.outcomePrices && Array.isArray(primaryMarket.outcomePrices)) {
-          yesToken = parseFloat(primaryMarket.outcomePrices[0]) || 0;
-          noToken = parseFloat(primaryMarket.outcomePrices[1]) || 0;
+        if (primaryMarket?.outcomePrices) {
+          try {
+            const parsedPrices = typeof primaryMarket.outcomePrices === 'string' 
+              ? JSON.parse(primaryMarket.outcomePrices) 
+              : primaryMarket.outcomePrices;
+              
+            if (Array.isArray(parsedPrices)) {
+              yesToken = parseFloat(parsedPrices[0]) || 0;
+              noToken = parseFloat(parsedPrices[1]) || 0;
+            }
+          } catch (e) {
+            console.error('Failed to parse outcome prices', primaryMarket.outcomePrices);
+          }
         }
-
+        
         return {
           id: event.id,
           title: event.title,
