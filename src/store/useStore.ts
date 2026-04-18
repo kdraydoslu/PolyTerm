@@ -75,6 +75,7 @@ interface AppState {
   selectedMarketId: string | null;
   positions: Position[];
   terminalLogs: TerminalLog[];
+  assetPrices: Record<string, number>;
   
   connectWallet: () => void;
   disconnectWallet: () => void;
@@ -84,6 +85,7 @@ interface AppState {
   executeTrade: (marketId: string, outcome: 'YES'|'NO', amount: number, signer?: any) => Promise<void>;
   setMarkets: (markets: Market[]) => void;
   fetchMarkets: () => Promise<void>;
+  fetchAssetPrices: () => Promise<void>;
   cashOut: (marketId: string, outcome: 'YES'|'NO') => void;
   setWalletState: (walletConnected: boolean, address: string | null, balanceUSDC: number) => void;
 }
@@ -98,9 +100,10 @@ export const useStore = create<AppState>((set, get) => ({
   selectedMarketId: null,
   positions: [],
   terminalLogs: [
-    { id: '1', timestamp: new Date(), text: 'System initialized. Connected to Polygon Mainnet RPC.', type: 'info' },
-    { id: '2', timestamp: new Date(), text: 'Polymarket contract loaded: 0x4b...3f9a. Listening for events.', type: 'info' }
+    { id: '1', timestamp: new Date(), text: 'Sistem başlatıldı. Polygon Ana Ağına bağlanıldı.', type: 'info' },
+    { id: '2', timestamp: new Date(), text: 'Polymarket akıllı kontratı yüklendi. Veriler senkronize ediliyor.', type: 'info' }
   ],
+  assetPrices: { BTC: 0, ETH: 0, SOL: 0, XRP: 0 },
   
   connectWallet: () => set({ 
     walletConnected: true, 
@@ -192,7 +195,25 @@ export const useStore = create<AppState>((set, get) => ({
       get().addTerminalLog(`Market sync complete. ${liveMarkets.length} standard, ${highFreqMarkets.length} high-freq loaded.`, 'success');
     } catch (err: any) {
       console.error(err);
-      get().addTerminalLog(`Gamma API Error: ${err.message}`, 'error');
+      get().addTerminalLog(`Gamma API Hatası: ${err.message}`, 'error');
+    }
+  },
+
+  fetchAssetPrices: async () => {
+    try {
+      const symbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT'];
+      const prices: Record<string, number> = {};
+      
+      await Promise.all(symbols.map(async (sym) => {
+        const res = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${sym}`);
+        const data = await res.json();
+        const key = sym.replace('USDT', '');
+        prices[key] = parseFloat(data.price);
+      }));
+
+      set({ assetPrices: prices });
+    } catch (err) {
+      console.error('Price fetch failed', err);
     }
   },
 

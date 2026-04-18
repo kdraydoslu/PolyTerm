@@ -29,39 +29,37 @@ type Mode = 'SAFE' | 'AGGRESSIVE' | 'DEGEN';
 type Asset = 'BTC' | 'ETH' | 'SOL' | 'XRP';
 
 export function SpeedBets() {
-  const { highFreqMarkets, executeTrade, addTerminalLog } = useStore();
+  const { highFreqMarkets, executeTrade, addTerminalLog, assetPrices } = useStore();
   const signer = useEthersSigner();
   
   const [mode, setMode] = useState<Mode>('SAFE');
   const [selectedAsset, setSelectedAsset] = useState<Asset>('BTC');
   const [currentTime, setCurrentTime] = useState(Math.floor(Date.now() / 1000));
   const [signal, setSignal] = useState<StrategySignal | null>(null);
-  const [simulatedPrice, setSimulatedPrice] = useState(54820.50); // Mock live price
+  
+  const currentAssetPrice = assetPrices[selectedAsset] || 0;
   
   const window5m = StrategyEngine.getWindowInfo(300);
   const window15m = StrategyEngine.getWindowInfo(900);
 
-  // Live clock and simulation
+  // Live clock and signal calculation
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Math.floor(Date.now() / 1000);
       setCurrentTime(now);
       
-      // Simulate random price ticks for TA
-      setSimulatedPrice(prev => prev + (Math.random() - 0.5) * 10);
-      
-      // Calculate Signal
-      const openPrice = 54800; // Mock window open price
-      const currentSignal = StrategyEngine.calculateSignal(simulatedPrice, openPrice, []);
+      // Calculate Signal using real Binance price
+      const openPrice = currentAssetPrice * 0.9999; // Mock window open price near actual
+      const currentSignal = StrategyEngine.calculateSignal(currentAssetPrice, openPrice, []);
       setSignal(currentSignal);
 
-      // Snipe Logic: T-10s Auto Trigger (Visual only for now)
+      // Snipe Logic
       if (window5m.timeLeft === 10) {
-        addTerminalLog(`SNIPER: T-10s Window reached for ${selectedAsset}. Analyzing composite signal...`, 'warning');
+        addTerminalLog(`SNIPER: T-10s ${selectedAsset} penceresine ulaşıldı. Sinyal analiz ediliyor...`, 'warning');
       }
     }, 1000);
     return () => clearInterval(interval);
-  }, [selectedAsset, simulatedPrice, window5m.timeLeft]);
+  }, [selectedAsset, currentAssetPrice, window5m.timeLeft]);
 
   const handleManualSnipe = (direction: 'UP' | 'DOWN') => {
     const slug = selectedAsset === 'BTC' ? window5m.slug : `${selectedAsset.toLowerCase()}-updown-5m-${window5m.windowStart}`;
@@ -172,8 +170,8 @@ export function SpeedBets() {
             <h3 className="font-mono text-[10px] uppercase text-muted-foreground tracking-[0.2em] font-bold">Composite Signal Engine</h3>
             <div className="flex items-center gap-4">
               <div className="text-right">
-                <div className="text-[10px] font-mono text-muted-foreground uppercase mb-0.5">Live Price</div>
-                <div className="text-xl font-mono text-white tracking-tighter">${simulatedPrice.toFixed(2)}</div>
+                <div className="text-[10px] font-mono text-muted-foreground uppercase mb-0.5">Canlı Fiyat</div>
+                <div className="text-xl font-mono text-white tracking-tighter">${currentAssetPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
               </div>
             </div>
           </div>

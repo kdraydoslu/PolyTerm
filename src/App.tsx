@@ -12,12 +12,22 @@ import { useStore } from './store/useStore';
 export default function App() {
   const [activeTab, setActiveTab] = useState<'trade' | 'portfolio' | 'copy' | 'speed'>('trade');
 
-  const { fetchMarkets } = useStore();
+  const { fetchMarkets, fetchAssetPrices } = useStore();
 
   useEffect(() => {
     document.documentElement.classList.add('dark');
     fetchMarkets();
-  }, [fetchMarkets]);
+    
+    // Initial fetch
+    fetchAssetPrices();
+    
+    // Polling every 2 seconds for fresh prices
+    const interval = setInterval(() => {
+      fetchAssetPrices();
+    }, 2000);
+    
+    return () => clearInterval(interval);
+  }, [fetchMarkets, fetchAssetPrices]);
 
   return (
     <div className="h-screen w-full flex flex-col bg-background text-foreground overflow-hidden selection:bg-primary/30">
@@ -30,28 +40,28 @@ export default function App() {
           <button 
             onClick={() => setActiveTab('trade')} 
             className={`p-3 rounded-xl transition-all ${activeTab === 'trade' ? 'bg-[#1F1F1F] text-white outline outline-1 outline-[#1F1F1F]' : 'text-muted-foreground hover:text-white hover:bg-[#1A1A1A]'}`}
-            title="Markets"
+            title="Piyasalar"
           >
             <LayoutDashboard className="w-5 h-5" />
           </button>
           <button 
             onClick={() => setActiveTab('speed')}
             className={`p-3 rounded-xl transition-all ${activeTab === 'speed' ? 'bg-[#1F1F1F] text-white outline outline-1 outline-[#1F1F1F]' : 'text-muted-foreground hover:text-white hover:bg-[#1A1A1A]'}`}
-            title="Speed Bets (1m-15m)"
+            title="Hızlı Bahisler"
           >
             <Zap className="w-5 h-5 text-[#FF3333]" />
           </button>
           <button 
             onClick={() => setActiveTab('copy')}
             className={`p-3 rounded-xl transition-all ${activeTab === 'copy' ? 'bg-[#1F1F1F] text-white outline outline-1 outline-[#1F1F1F]' : 'text-muted-foreground hover:text-white hover:bg-[#1A1A1A]'}`}
-            title="Smart Money / Copy Trade"
+            title="Akıllı Takip"
           >
             <Target className="w-5 h-5" />
           </button>
           <button 
             onClick={() => setActiveTab('portfolio')}
             className={`p-3 rounded-xl transition-all ${activeTab === 'portfolio' ? 'bg-[#1F1F1F] text-white outline outline-1 outline-[#1F1F1F]' : 'text-muted-foreground hover:text-white hover:bg-[#1A1A1A]'}`}
-            title="Portfolio"
+            title="Portföy"
           >
             <Wallet className="w-5 h-5" />
           </button>
