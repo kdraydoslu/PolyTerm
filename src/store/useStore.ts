@@ -90,34 +90,11 @@ interface AppState {
 export const useStore = create<AppState>((set, get) => ({
   walletConnected: false,
   address: null,
-  balanceUSDC: 15420.50,
-  markets: MOCK_MARKETS,
+  balanceUSDC: 0,
+  markets: [],
   selectedCategory: 'All',
-  selectedMarketId: MOCK_MARKETS[0].id,
-  positions: [
-    {
-      marketId: 'm1',
-      marketTitle: 'Trump wins 2024 Presidential Election?',
-      outcome: 'YES',
-      shares: 1000,
-      avgPrice: 0.45,
-      currentPrice: 0.52,
-      value: 520,
-      pnl: 70,
-      pnlPercent: 15.55
-    },
-    {
-      marketId: 'm2',
-      marketTitle: 'Ethereum ETF approved by SEC in May?',
-      outcome: 'NO',
-      shares: 5000,
-      avgPrice: 0.50,
-      currentPrice: 0.65,
-      value: 3250,
-      pnl: 750,
-      pnlPercent: 30.00
-    }
-  ],
+  selectedMarketId: null,
+  positions: [],
   terminalLogs: [
     { id: '1', timestamp: new Date(), text: 'System initialized. Connected to Polygon Mainnet RPC.', type: 'info' },
     { id: '2', timestamp: new Date(), text: 'Polymarket contract loaded: 0x4b...3f9a. Listening for events.', type: 'info' }
