@@ -70,6 +70,7 @@ interface AppState {
   address: string | null;
   balanceUSDC: number;
   markets: Market[];
+  highFreqMarkets: Market[];
   selectedCategory: string;
   selectedMarketId: string | null;
   positions: Position[];
@@ -92,6 +93,7 @@ export const useStore = create<AppState>((set, get) => ({
   address: null,
   balanceUSDC: 0,
   markets: [],
+  highFreqMarkets: [],
   selectedCategory: 'All',
   selectedMarketId: null,
   positions: [],
@@ -124,54 +126,70 @@ export const useStore = create<AppState>((set, get) => ({
 
   fetchMarkets: async () => {
     try {
-      get().addTerminalLog('Fetching live markets from Polymarket Gamma API...', 'info');
-      const res = await fetch('/api/gamma/data?closed=false&active=true&limit=50');
-      const data = await res.json();
+      get().addTerminalLog('Syncing with Polymarket Gamma API...', 'info');
+      
+      // Fetch both general active events and specific Bitcoin events
+      const [genRes, btcRes] = await Promise.all([
+        fetch('/api/gamma/data?closed=false&active=true&limit=50'),
+        fetch('/api/gamma/data?closed=false&active=true&limit=30&search=Bitcoin')
+      ]);
+      
+      const genData = await genRes.json();
+      const btcData = await btcRes.json();
 
-      // Ensure we only process events that have valid active markets
-      const activeEvents = data.filter((event: any) => event.active && !event.closed);
-
-      const liveMarkets: Market[] = activeEvents.map((event: any) => {
-        // Find a sub-market that is actually active and not closed
-        const primaryMarket = event.markets?.find((m: any) => m.active && !m.closed) || event.markets?.[0];
-        
-        let yesToken = 0;
-        let noToken = 0;
-        if (primaryMarket?.outcomePrices) {
-          try {
-            const parsedPrices = typeof primaryMarket.outcomePrices === 'string' 
-              ? JSON.parse(primaryMarket.outcomePrices) 
-              : primaryMarket.outcomePrices;
-              
-            if (Array.isArray(parsedPrices)) {
-              yesToken = parseFloat(parsedPrices[0]) || 0;
-              noToken = parseFloat(parsedPrices[1]) || 0;
-            }
-          } catch (e) {
-            console.error('Failed to parse outcome prices', primaryMarket.outcomePrices);
+      const parseMarkets = (data: any[]) => {
+        return data.filter((event: any) => event.active && !event.closed).map((event: any) => {
+          const primaryMarket = event.markets?.find((m: any) => m.active && !m.closed) || event.markets?.[0];
+          let yesToken = 0;
+          let noToken = 0;
+          if (primaryMarket?.outcomePrices) {
+            try {
+              const parsedPrices = typeof primaryMarket.outcomePrices === 'string' 
+                ? JSON.parse(primaryMarket.outcomePrices) 
+                : primaryMarket.outcomePrices;
+                
+              if (Array.isArray(parsedPrices)) {
+                yesToken = parseFloat(parsedPrices[0]) || 0;
+                noToken = parseFloat(parsedPrices[1]) || 0;
+              }
+            } catch (e) {}
           }
-        }
-        
-        return {
-          id: String(event.id),
-          title: event.title,
-          category: event.tags?.[0]?.label || event.tags?.[0] || 'General',
-          image: event.image || 'https://polymarket.com/favicon.ico',
-          volume: event.volume ? parseFloat(event.volume) : 0,
-          liquidity: event.liquidity ? parseFloat(event.liquidity) : 0,
-          endDate: event.endDate || new Date().toISOString(),
-          yesPrice: yesToken,
-          noPrice: noToken,
-          chance: yesToken * 100, // naive display logic
-          _rawMarketIds: event.markets?.map((m: any) => m.id) // save actual market IDs for CLOB
-        };
-      }).filter((m: Market) => m.yesPrice > 0 && m.yesPrice < 1).slice(0, 20);
+          
+          return {
+            id: String(event.id),
+            title: event.title,
+            category: event.tags?.[0]?.label || event.tags?.[0] || 'General',
+            image: event.image || 'https://polymarket.com/favicon.ico',
+            volume: event.volume ? parseFloat(event.volume) : 0,
+            liquidity: event.liquidity ? parseFloat(event.liquidity) : 0,
+            endDate: event.endDate || new Date().toISOString(),
+            yesPrice: yesToken,
+            noPrice: noToken,
+            chance: yesToken * 100,
+            _rawMarketIds: event.markets?.map((m: any) => m.id)
+          };
+        }).filter((m: any) => m.yesPrice > 0 && m.yesPrice < 1);
+      };
 
-      set({ markets: liveMarkets });
-      if (liveMarkets.length > 0) {
+      const liveMarkets = parseMarkets(genData).slice(0, 20);
+      const highFreqMarkets = parseMarkets(btcData)
+        .filter((m: any) => 
+          m.title.toLowerCase().includes('5m') || 
+          m.title.toLowerCase().includes('15m') || 
+          m.title.toLowerCase().includes('price') ||
+          m.title.toLowerCase().includes('bitcoin')
+        ).slice(0, 10);
+
+      set({ 
+        markets: liveMarkets, 
+        highFreqMarkets: highFreqMarkets.length > 0 ? highFreqMarkets : liveMarkets.slice(0, 5) 
+      });
+
+      if (liveMarkets.length > 0 && !get().selectedMarketId) {
         set({ selectedMarketId: liveMarkets[0].id });
       }
-      get().addTerminalLog(`Successfully loaded ${liveMarkets.length} live markets.`, 'success');
+      
+      get().addTerminalLog(`Market sync complete. ${liveMarkets.length} standard, ${highFreqMarkets.length} high-freq loaded.`, 'success');
     } catch (err: any) {
       console.error(err);
       get().addTerminalLog(`Gamma API Error: ${err.message}`, 'error');
@@ -194,7 +212,7 @@ export const useStore = create<AppState>((set, get) => ({
   }),
 
   executeTrade: async (marketId, outcome, amount, signer) => {
-    const market = get().markets.find(m => m.id === marketId);
+    const market = [...get().markets, ...get().highFreqMarkets].find(m => m.id === marketId);
     if (!market) return;
 
     if (!signer) {
@@ -206,8 +224,6 @@ export const useStore = create<AppState>((set, get) => ({
       get().addTerminalLog(`Initiating CLOB order for ${outcome} on [${market.id}] with ${amount} USDC...`, 'info');
       
       const funderAddress = await signer.getAddress();
-      
-      // We dynamically import ClobClient to avoid SSR issues if any, but since we are vite it's fine.
       const { ClobClient } = await import('@polymarket/clob-client');
       
       const clobClient = new ClobClient(
@@ -218,19 +234,14 @@ export const useStore = create<AppState>((set, get) => ({
       );
 
       get().addTerminalLog(`Requesting L1 Signature to create API Keys...`, 'warning');
-      
-      // Creating API key will trigger Metamask signature request.
       const creds = await clobClient.createApiKey();
-      
       get().addTerminalLog(`Successfully created CLOB Api Key. KeyID: ${(creds as any).key || '...' }`, 'success');
       
-      // Simulate order placement
       const price = outcome === 'YES' ? market.yesPrice : market.noPrice;
       const shares = amount / price;
 
       get().addTerminalLog(`Order Placed: BUY ${shares.toFixed(2)} ${outcome} shares. (Simulation)`, 'success');
 
-      // Update positions mock to reflect the action in the UI
       set((state) => {
         const newPositions = [...state.positions];
         const existingIdx = newPositions.findIndex(p => p.marketId === marketId && p.outcome === outcome);
@@ -255,7 +266,7 @@ export const useStore = create<AppState>((set, get) => ({
             shares,
             avgPrice: price,
             currentPrice: price,
-            value: amount, // initially value = cost
+            value: amount,
             pnl: 0,
             pnlPercent: 0
           });

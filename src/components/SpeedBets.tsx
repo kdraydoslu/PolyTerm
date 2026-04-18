@@ -11,11 +11,11 @@ function formatTimer(seconds: number) {
 import { useEthersSigner } from '../lib/ethersAdapter';
 
 export function SpeedBets() {
-  const { markets, executeTrade, addTerminalLog } = useStore();
+  const { highFreqMarkets, executeTrade, addTerminalLog } = useStore();
   const signer = useEthersSigner();
   
-  // We'll take first 6 markets and assign them random timers for "Speed" feel
-  const speedMarkets = markets.slice(0, 6);
+  // High frequency markets (BTC 5m/15m etc)
+  const speedMarkets = highFreqMarkets;
   const [timers, setTimers] = useState<Record<string, number>>({});
   const [initialTimes, setInitialTimes] = useState<Record<string, number>>({});
 
