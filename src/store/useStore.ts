@@ -125,7 +125,7 @@ export const useStore = create<AppState>((set, get) => ({
   fetchMarkets: async () => {
     try {
       get().addTerminalLog('Fetching live markets from Polymarket Gamma API...', 'info');
-      const res = await fetch('https://gamma-api.polymarket.com/events?closed=false&active=true&limit=50');
+      const res = await fetch('/api/gamma/data?closed=false&active=true&limit=50');
       const data = await res.json();
 
       // Ensure we only process events that have valid active markets
