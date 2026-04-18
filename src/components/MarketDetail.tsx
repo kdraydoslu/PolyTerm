@@ -232,6 +232,12 @@ export function MarketDetail() {
           <Button 
             onClick={handleTrade}
             disabled={!tradeAmount}
+            className={`w-full font-mono font-black italic rounded-xl h-14 text-sm tracking-tighter shadow-2xl transition-all active:scale-95 ${
+              tradeOutcome === 'YES' 
+                ? 'bg-primary text-black hover:bg-[#00E64D] hover:shadow-primary/20' 
+                : 'bg-[#FF3333] text-white hover:bg-[#E62E2E] hover:shadow-[#FF3333]/20'
+            }`}
+          >
             {tradeOutcome === 'YES' ? 'EVET' : 'HAYIR'} EMRİNİ VER
           </Button>
         </div>
