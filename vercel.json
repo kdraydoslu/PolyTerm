@@ -3,6 +3,10 @@
     {
       "source": "/api/gamma/data",
       "destination": "https://gamma-api.polymarket.com/events"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
