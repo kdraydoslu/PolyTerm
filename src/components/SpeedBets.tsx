@@ -53,13 +53,33 @@ export function SpeedBets() {
       const currentSignal = StrategyEngine.calculateSignal(currentAssetPrice, openPrice, []);
       setSignal(currentSignal);
 
-      // Snipe Logic
-      if (window5m.timeLeft === 10) {
-        addTerminalLog(`SNIPER: T-10s ${selectedAsset} penceresine ulaşıldı. Sinyal analiz ediliyor...`, 'warning');
+      // Snipe Logic: T-10s Auto Trigger
+      if (window5m.timeLeft === 10 && currentSignal.direction !== 'NEUTRAL') {
+        const threshold = mode === 'SAFE' ? 0.3 : mode === 'AGGRESSIVE' ? 0.2 : 0;
+        
+        if (currentSignal.confidence >= threshold) {
+          addTerminalLog(`OTO-SNIPE: T-10s Sınırı geçildi. Güven: ${(currentSignal.confidence*100).toFixed(0)}%. Emir iletiliyor...`, 'success');
+          
+          // Find actual marketId from highFreqMarkets that matches asset and interval
+          const targetMarket = highFreqMarkets.find(m => 
+            m.title.includes(selectedAsset) && 
+            (m.title.includes('5m') || m.title.includes('5-min'))
+          );
+
+          if (targetMarket) {
+            const outcome = currentSignal.direction === 'UP' ? 'YES' : 'NO';
+            const amount = mode === 'SAFE' ? 25 : mode === 'AGGRESSIVE' ? 50 : 100; // Simplified sizing
+            executeTrade(targetMarket.id, outcome, amount, signer);
+          } else {
+            addTerminalLog(`HATA: ${selectedAsset} 5dk marketi bulunamadı. Lütfen "Piyasalar" sekmesini kontrol edin.`, 'error');
+          }
+        } else {
+          addTerminalLog(`OTO-SNIPE: Güven seviyesi yetersiz (${(currentSignal.confidence*100).toFixed(0)}% < ${threshold*100}%). İşlem iptal edildi.`, 'warning');
+        }
       }
     }, 1000);
     return () => clearInterval(interval);
-  }, [selectedAsset, currentAssetPrice, window5m.timeLeft]);
+  }, [selectedAsset, currentAssetPrice, window5m.timeLeft, highFreqMarkets, mode, signer]);
 
   const handleManualSnipe = (direction: 'UP' | 'DOWN') => {
     const slug = selectedAsset === 'BTC' ? window5m.slug : `${selectedAsset.toLowerCase()}-updown-5m-${window5m.windowStart}`;
