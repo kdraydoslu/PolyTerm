@@ -34,7 +34,7 @@ export function SpeedBets() {
     
     setTimers(newTimers);
     setInitialTimes(newInit);
-  }, [markets]);
+  }, [highFreqMarkets]);
 
   // Global countdown
   useEffect(() => {
