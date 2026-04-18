@@ -76,6 +76,11 @@ interface AppState {
   positions: Position[];
   terminalLogs: TerminalLog[];
   assetPrices: Record<string, number>;
+  clobApi: {
+    apiKey: string,
+    apiSecret: string,
+    apiPassphrase: string,
+  } | null;
   
   connectWallet: () => void;
   disconnectWallet: () => void;
@@ -88,6 +93,7 @@ interface AppState {
   fetchAssetPrices: () => Promise<void>;
   cashOut: (marketId: string, outcome: 'YES'|'NO') => void;
   setWalletState: (walletConnected: boolean, address: string | null, balanceUSDC: number) => void;
+  setClobApi: (api: { apiKey: string, apiSecret: string, apiPassphrase: string } | null) => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -105,6 +111,8 @@ export const useStore = create<AppState>((set, get) => ({
   ],
   assetPrices: { BTC: 0, ETH: 0, SOL: 0, XRP: 0 },
   
+  clobApi: null,
+  
   connectWallet: () => set({ 
     walletConnected: true, 
     address: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e' 
@@ -114,6 +122,13 @@ export const useStore = create<AppState>((set, get) => ({
     walletConnected: false, 
     address: null 
   }),
+
+  setClobApi: (clobApi) => {
+    set({ clobApi });
+    if (clobApi) {
+      get().addTerminalLog('Polymarket API Anahtarları yüklendi. İşlemler API üzerinden yapılacak.', 'success');
+    }
+  },
 
   setSelectedCategory: (category) => set({ selectedCategory: category }),
   
@@ -237,31 +252,45 @@ export const useStore = create<AppState>((set, get) => ({
     if (!market) return;
 
     if (!signer) {
-      get().addTerminalLog(`Error: Please connect your wallet first.`, 'error');
+      get().addTerminalLog(`Hata: Lütfen önce cüzdanınızı bağlayın.`, 'error');
       return;
     }
 
     try {
-      get().addTerminalLog(`Initiating CLOB order for ${outcome} on [${market.id}] with ${amount} USDC...`, 'info');
+      get().addTerminalLog(`[${market.id}] için ${outcome === 'YES' ? 'EVET' : 'HAYIR'} emri iletiliyor: ${amount} USDC...`, 'info');
       
       const funderAddress = await signer.getAddress();
       const { ClobClient } = await import('@polymarket/clob-client');
-      
-      const clobClient = new ClobClient(
-        "https://clob.polymarket.com",
-        137,
-        signer,
-        funderAddress
-      );
+      const { clobApi } = get();
 
-      get().addTerminalLog(`Requesting L1 Signature to create API Keys...`, 'warning');
-      const creds = await clobClient.createApiKey();
-      get().addTerminalLog(`Successfully created CLOB Api Key. KeyID: ${(creds as any).key || '...' }`, 'success');
-      
+      let clobClient;
+      if (clobApi) {
+        // Use provided API keys
+        clobClient = new ClobClient(
+          "https://clob.polymarket.com",
+          137,
+          signer,
+          {
+            apiKey: clobApi.apiKey,
+            apiSecret: clobApi.apiSecret,
+            apiPassphrase: clobApi.apiPassphrase
+          }
+        );
+      } else {
+        // Fallback to signer (L1 connection)
+        clobClient = new ClobClient(
+          "https://clob.polymarket.com",
+          137,
+          signer,
+          funderAddress
+        );
+        get().addTerminalLog(`L1 İmzası isteniyor. (API Anahtarı bulunamadı)`, 'warning');
+      }
+
       const price = outcome === 'YES' ? market.yesPrice : market.noPrice;
       const shares = amount / price;
 
-      get().addTerminalLog(`Order Placed: BUY ${shares.toFixed(2)} ${outcome} shares. (Simulation)`, 'success');
+      get().addTerminalLog(`Emir İletildi: ${shares.toFixed(2)} adet ${outcome === 'YES' ? 'EVET' : 'HAYIR'} payı alındı. (Simülasyon)`, 'success');
 
       set((state) => {
         const newPositions = [...state.positions];

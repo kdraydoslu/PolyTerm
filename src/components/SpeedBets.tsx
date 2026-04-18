@@ -53,33 +53,41 @@ export function SpeedBets() {
       const currentSignal = StrategyEngine.calculateSignal(currentAssetPrice, openPrice, []);
       setSignal(currentSignal);
 
-      // Snipe Logic: T-10s Auto Trigger
+      // Snipe Logic: T-10s Auto Trigger (5m)
       if (window5m.timeLeft === 10 && currentSignal.direction !== 'NEUTRAL') {
         const threshold = mode === 'SAFE' ? 0.3 : mode === 'AGGRESSIVE' ? 0.2 : 0;
-        
         if (currentSignal.confidence >= threshold) {
-          addTerminalLog(`OTO-SNIPE: T-10s Sınırı geçildi. Güven: ${(currentSignal.confidence*100).toFixed(0)}%. Emir iletiliyor...`, 'success');
-          
-          // Find actual marketId from highFreqMarkets that matches asset and interval
-          const targetMarket = highFreqMarkets.find(m => 
-            m.title.includes(selectedAsset) && 
-            (m.title.includes('5m') || m.title.includes('5-min'))
-          );
+          addTerminalLog(`OTO-SNIPE [5dk]: T-10s sınırı geçildi. Güven: ${(currentSignal.confidence*100).toFixed(0)}%. Emir iletiliyor...`, 'success');
+          executeAutoSnipe('5m', currentSignal.direction);
+        }
+      }
 
-          if (targetMarket) {
-            const outcome = currentSignal.direction === 'UP' ? 'YES' : 'NO';
-            const amount = mode === 'SAFE' ? 25 : mode === 'AGGRESSIVE' ? 50 : 100; // Simplified sizing
-            executeTrade(targetMarket.id, outcome, amount, signer);
-          } else {
-            addTerminalLog(`HATA: ${selectedAsset} 5dk marketi bulunamadı. Lütfen "Piyasalar" sekmesini kontrol edin.`, 'error');
-          }
-        } else {
-          addTerminalLog(`OTO-SNIPE: Güven seviyesi yetersiz (${(currentSignal.confidence*100).toFixed(0)}% < ${threshold*100}%). İşlem iptal edildi.`, 'warning');
+      // Snipe Logic: T-10s Auto Trigger (15m)
+      if (window15m.timeLeft === 10 && currentSignal.direction !== 'NEUTRAL') {
+        const threshold = mode === 'SAFE' ? 0.4 : mode === 'AGGRESSIVE' ? 0.25 : 0.1;
+        if (currentSignal.confidence >= threshold) {
+          addTerminalLog(`OTO-SNIPE [15dk]: T-10s sınırı geçildi. Güven: ${(currentSignal.confidence*100).toFixed(0)}%. Emir iletiliyor...`, 'success');
+          executeAutoSnipe('15m', currentSignal.direction);
         }
       }
     }, 1000);
     return () => clearInterval(interval);
-  }, [selectedAsset, currentAssetPrice, window5m.timeLeft, highFreqMarkets, mode, signer]);
+  }, [selectedAsset, currentAssetPrice, window5m.timeLeft, window15m.timeLeft, highFreqMarkets, mode, signer]);
+
+  const executeAutoSnipe = (interval: string, direction: 'UP' | 'DOWN') => {
+    const targetMarket = highFreqMarkets.find(m => 
+      m.title.includes(selectedAsset) && 
+      (m.title.includes(interval) || m.title.includes(interval.replace('m', '-min')))
+    );
+
+    if (targetMarket) {
+      const outcome = direction === 'UP' ? 'YES' : 'NO';
+      const amount = mode === 'SAFE' ? 25 : mode === 'AGGRESSIVE' ? 50 : 100;
+      executeTrade(targetMarket.id, outcome, amount, signer);
+    } else {
+      addTerminalLog(`HATA: ${selectedAsset} ${interval} marketi bulunamadı.`, 'error');
+    }
+  };
 
   const handleManualSnipe = (direction: 'UP' | 'DOWN') => {
     const slug = selectedAsset === 'BTC' ? window5m.slug : `${selectedAsset.toLowerCase()}-updown-5m-${window5m.windowStart}`;

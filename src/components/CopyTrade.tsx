@@ -23,12 +23,12 @@ export function CopyTrade() {
       const market = markets[Math.floor(Math.random() * markets.length)];
       const whale = `0x${Math.random().toString(16).slice(2, 5)}...${Math.random().toString(16).slice(2, 5)}`;
       const amount = (Math.random() * 5000 + 1000).toFixed(0);
-      const outcome = Math.random() > 0.5 ? 'YES' : 'NO';
+      const outcome = Math.random() > 0.5 ? 'EVET' : 'HAYIR';
       
       const newEvent = {
         id: Math.random().toString(),
-        text: `🐳 WHALE ALERT: ${whale} deposited ${amount} USDC on ${outcome} [${market.title.slice(0, 30)}...]`,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+        text: `🐳 BALİNA ALARMI: ${whale} adresi ${amount} USDC tutarında ${outcome} [${market.title.slice(0, 30)}...] emri girdi.`,
+        time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
       };
       
       setLiveFeed(prev => [newEvent, ...prev].slice(0, 5));
@@ -40,7 +40,7 @@ export function CopyTrade() {
   }, [markets]);
 
   const handleCopy = (address: string) => {
-    addTerminalLog(`SMART RADAR: Syncing with shadow wallet ${address}. Mirroring execution at 1:1 ratio.`, 'success');
+    addTerminalLog(`AKILLI RADAR: ${address} cüzdanı ile senkronize olunuyor. İşlemler 1:1 oranında kopyalanacak.`, 'success');
   };
 
   return (
@@ -49,34 +49,34 @@ export function CopyTrade() {
         <div>
           <div className="flex items-center gap-2 mb-3">
              <span className="flex h-2 w-2 rounded-full bg-primary animate-pulse" />
-             <span className="text-[10px] font-mono text-primary font-bold uppercase tracking-[0.2em]">Signal Engine v4.0</span>
+             <span className="text-[10px] font-mono text-primary font-bold uppercase tracking-[0.2em]">Sinyal Motoru v4.0</span>
           </div>
           <h2 className="text-4xl font-black tracking-tighter text-white flex items-center gap-3 italic">
             <Target className="w-10 h-10 text-primary" />
-            SMART <span className="text-primary italic">MONEY</span> RADAR
+            AKILLI <span className="text-primary italic">PARA</span> RADARI
           </h2>
           <p className="font-mono text-[10px] text-muted-foreground max-w-lg mt-3 leading-relaxed uppercase tracking-wider">
-            Deep-scan Polymarket orderbooks to track top-tier alpha wallets. 
-            Real-time execution mirroring enabled for verified whale addresses.
+            Polymarket emir defterlerini derinlemesine tarayarak en yüksek kâr oranına sahip cüzdanları takip edin. 
+            Doğrulanmış balina adresleri için gerçek zamanlı işlem kopyalama devrede.
           </p>
         </div>
         
-        <div className="bg-[#050505] border border-[#111] p-4 rounded-2xl min-w-[300px] flex flex-col gap-3">
+        <div className="bg-[#050505] border border-[#111] p-4 rounded-2xl min-w-[300px] flex flex-col gap-3 shadow-2xl">
            <div className="flex items-center justify-between border-b border-[#111] pb-2">
-              <span className="text-[10px] font-mono text-muted-foreground uppercase flex items-center gap-2"><Globe className="w-3 h-3"/> Global Activity Feed</span>
-              <span className="text-[9px] font-mono text-[#00FF55] px-1 bg-[#00FF55]/10 rounded">LIVE</span>
+              <span className="text-[10px] font-mono text-muted-foreground uppercase flex items-center gap-2"><Globe className="w-3 h-3"/> Küresel İşlem Akışı</span>
+              <span className="text-[9px] font-mono text-[#00FF55] px-1 bg-[#00FF55]/10 rounded">CANLI</span>
            </div>
            <div className="flex flex-col gap-2">
               {liveFeed.map(item => (
                 <div key={item.id} className="flex gap-3 items-start animate-in slide-in-from-right-4 fade-in duration-500">
                    <Zap className="w-3 h-3 text-primary mt-1 shrink-0" />
                    <p className="text-[10px] font-mono text-white/50 leading-tight">
-                     <span className="text-muted-foreground italic mr-2">[{item.time}]</span>
-                     {item.text}
+                      <span className="text-muted-foreground italic mr-2">[{item.time}]</span>
+                      {item.text}
                    </p>
                 </div>
               ))}
-              {liveFeed.length === 0 && <span className="text-[10px] font-mono text-muted-foreground italic">Scanning chain...</span>}
+              {liveFeed.length === 0 && <span className="text-[10px] font-mono text-muted-foreground italic">Chain taranıyor...</span>}
            </div>
         </div>
       </div>
@@ -87,11 +87,11 @@ export function CopyTrade() {
             <TrendingUp className="w-12 h-12 text-[#00FF55]" />
           </div>
           <h4 className="font-mono text-[10px] uppercase text-muted-foreground mb-4 flex items-center gap-2">
-             Volume Managed
+             Yönetilen Hacim
           </h4>
           <span className="text-3xl font-black italic text-white tracking-tighter tabular-nums">$142.5M</span>
           <div className="mt-4 flex items-center gap-1 text-[10px] text-[#00FF55] font-mono">
-             <ArrowRight className="w-3 h-3"/> +12.4% TODAY
+             <ArrowRight className="w-3 h-3"/> +12.4% BUGÜN
           </div>
         </div>
         
@@ -100,11 +100,11 @@ export function CopyTrade() {
             <Users className="w-12 h-12 text-[#00FF55]" />
           </div>
           <h4 className="font-mono text-[10px] uppercase text-muted-foreground mb-4 flex items-center gap-2">
-             Active Trackers
+             Aktif Takipçiler
           </h4>
           <span className="text-3xl font-black italic text-white tracking-tighter tabular-nums">4,205</span>
           <div className="mt-4 flex items-center gap-1 text-primary font-mono text-[10px]">
-             <Eye className="w-3 h-3"/> WATCHING NOW
+             <Eye className="w-3 h-3"/> ŞU AN İZLEYEN
           </div>
         </div>
 
@@ -113,11 +113,11 @@ export function CopyTrade() {
             <Shield className="w-12 h-12 text-[#00FF55]" />
           </div>
           <h4 className="font-mono text-[10px] uppercase text-muted-foreground mb-4 flex items-center gap-2">
-             Your Shadow-Copied
+             Kopyalanan Cüzdanlar
           </h4>
-          <span className="text-3xl font-black italic text-white tracking-tighter tabular-nums">0 <span className="text-sm text-muted-foreground not-italic font-mono uppercase">Wallets</span></span>
+          <span className="text-3xl font-black italic text-white tracking-tighter tabular-nums">0 <span className="text-sm text-muted-foreground not-italic font-mono uppercase">CÜZDAN</span></span>
           <div className="mt-4 flex items-center gap-1 text-muted-foreground font-mono text-[10px]">
-             READY TO SYNC
+             SENKRONİZASYONA HAZIR
           </div>
         </div>
       </div>
@@ -126,17 +126,17 @@ export function CopyTrade() {
         <Table>
           <TableHeader className="bg-[#0A0A0A]">
             <TableRow className="border-[#111] hover:bg-transparent">
-              <TableHead className="font-mono text-[10px] uppercase text-muted-foreground w-16 text-center h-12 font-bold tracking-widest">Rank</TableHead>
-              <TableHead className="font-mono text-[10px] uppercase text-muted-foreground border-l border-[#111] h-12 font-bold tracking-widest">Target Shadow Address</TableHead>
-              <TableHead className="font-mono text-[10px] uppercase text-muted-foreground text-right border-l border-[#111] h-12 font-bold tracking-widest">30D Realized PNL</TableHead>
-              <TableHead className="font-mono text-[10px] uppercase text-muted-foreground text-right border-l border-[#111] h-12 font-bold tracking-widest">Accuracy</TableHead>
-              <TableHead className="font-mono text-[10px] uppercase text-muted-foreground text-right border-l border-[#111] h-12 font-bold tracking-widest">Target Market</TableHead>
-              <TableHead className="font-mono text-[10px] uppercase text-muted-foreground text-right border-l border-[#111] w-[160px] h-12 font-bold tracking-widest">Execution</TableHead>
+              <TableHead className="font-mono text-[10px] uppercase text-muted-foreground w-16 text-center h-12 font-bold tracking-widest">Sıra</TableHead>
+              <TableHead className="font-mono text-[10px] uppercase text-muted-foreground border-l border-[#111] h-12 font-bold tracking-widest">Hedef Cüzdan Adresi</TableHead>
+              <TableHead className="font-mono text-[10px] uppercase text-muted-foreground text-right border-l border-[#111] h-12 font-bold tracking-widest">30G Gerçekleşen Kâr</TableHead>
+              <TableHead className="font-mono text-[10px] uppercase text-muted-foreground text-right border-l border-[#111] h-12 font-bold tracking-widest">Başarı Oranı</TableHead>
+              <TableHead className="font-mono text-[10px] uppercase text-muted-foreground text-right border-l border-[#111] h-12 font-bold tracking-widest">Son İşlem</TableHead>
+              <TableHead className="font-mono text-[10px] uppercase text-muted-foreground text-right border-l border-[#111] w-[180px] h-12 font-bold tracking-widest">İşlem</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {STATIC_TRADERS.map((t, i) => {
-              const recentMarket = markets[i % markets.length]?.title || 'Analyzing...';
+              const recentMarket = markets[i % markets.length]?.title || 'Analiz ediliyor...';
               return (
                 <TableRow key={t.rank} className="border-[#111] hover:bg-[#0A0A0A] transition-colors cursor-pointer group h-16">
                   <TableCell className="text-center font-mono font-black text-white/20 group-hover:text-primary transition-colors italic">
@@ -159,7 +159,7 @@ export function CopyTrade() {
                       onClick={() => handleCopy(t.address)}
                       className="w-full text-[10px] bg-primary/10 text-primary border border-primary/20 hover:bg-primary hover:text-black hover:shadow-[0_0_15px_rgba(0,255,100,0.3)] px-3 py-2 rounded-lg font-mono uppercase font-black transition-all"
                     >
-                      SYNC REPLICATION
+                      KOPYALAMAYI BAŞLAT
                     </button>
                   </TableCell>
                 </TableRow>
